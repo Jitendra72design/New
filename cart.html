@@ -1,0 +1,39 @@
+<!DOCTYPE html><html>
+<head>
+  <title>Cart</title>
+</head>
+<body>
+  <h2>Your Cart</h2>
+  <div id="cart-items"></div>
+  <button id="place-order">Place Order</button>
+  <script src="firebase-config.js"></script>
+  <script>
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) return window.location.href = 'login.html';
+      const userId = user.uid;
+      const db = firebase.firestore();
+      const container = document.getElementById('cart-items');
+
+      db.collection('carts').doc(userId).get().then(doc => {
+        const data = doc.data();
+        const cart = data?.items || [];
+        if (cart.length === 0) container.innerText = 'Cart is empty';
+        else container.innerHTML = cart.map(item => `<p>${item.name} - Rs.${item.price}</p>`).join('');
+      });
+
+      document.getElementById('place-order').addEventListener('click', () => {
+        db.collection('carts').doc(userId).get().then(doc => {
+          const items = doc.data()?.items || [];
+          if (items.length === 0) return alert('Cart is empty');
+          db.collection('orders').add({ userId, items, date: new Date() })
+            .then(() => {
+              db.collection('carts').doc(userId).set({ items: [] });
+              alert('Order placed!');
+              window.location.href = 'index.html';
+            });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
